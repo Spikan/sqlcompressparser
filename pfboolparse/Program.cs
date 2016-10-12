@@ -6,6 +6,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using ICSharpCode.SharpZipLib.Core;
+using ICSharpCode.SharpZipLib.Zip;
+using ZipFile = System.IO.Compression.ZipFile;
 
 namespace pfboolparse
 {
@@ -161,12 +164,12 @@ namespace pfboolparse
             proc.BeginOutputReadLine();
             proc.WaitForExit();
 
-            using (var zip = ZipFile.Open(Path + zfile + ".zip", ZipArchiveMode.Create))
-                zip.CreateEntryFromFile(Path + zfile + ".psv", zfile + ".psv");
-            //CreateZip(zfile);
+            //using (var zip = ZipFile.Open(Path + zfile + ".zip", ZipArchiveMode.Create))
+            //    zip.CreateEntryFromFile(Path + zfile + ".psv", zfile + ".psv");
+            CreateZip(zfile);
             File.Delete(Path + zfile + ".psv");
         }
-        /*
+        
         public static void CreateZip(string filename)
         {
             var fsOut = File.Create(Path + filename + ".zip");
@@ -208,7 +211,7 @@ namespace pfboolparse
             zipStream.IsStreamOwner = true; // Makes the Close also Close the underlying stream
             zipStream.Close();
         }
-        */
+        
     }
 
     
