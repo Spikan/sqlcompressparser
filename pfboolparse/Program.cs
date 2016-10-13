@@ -78,10 +78,11 @@ namespace pfboolparse
             {
                 var query2 = ConfigurationManager.AppSettings["Query2"];
                 var replace = "[" + s + "]";
+                var nokbm = s.ToString().Replace("_KBM", "");
                 
                 query2 = query2.Replace("TABLENAME", replace);
                 ProcessCmd("bcp",
-                    $"\"{query2}\" queryout \"{Path}{s}.psv\" -c -t | -U sa -P liamcow {sqlServer}", s.ToString());
+                    $"\"{query2}\" queryout \"{Path}{nokbm}.psv\" -c -t | -U sa -P liamcow {sqlServer}", nokbm);
 
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " is working on " + s);
             }
