@@ -17,8 +17,6 @@ namespace pfboolparse
 
         private static void Main(string[] args)
         {
-           
-            
             var exists = Directory.Exists(Path);
             if (!exists)
                 Directory.CreateDirectory(Path);
@@ -31,8 +29,6 @@ namespace pfboolparse
                                    "Password=liamcow;"
             };
 
-            
-
 
             taxonomy.Open();
 
@@ -42,7 +38,7 @@ namespace pfboolparse
             {
                 command.CommandTimeout = int.MaxValue;
                 command.CommandText =
-                   ConfigurationManager.AppSettings["Query1"];
+                    ConfigurationManager.AppSettings["Query1"];
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
@@ -56,7 +52,9 @@ namespace pfboolparse
             taxonomy.Close();
 
 
-            var threads = args.Length != 0 ? Convert.ToInt32(args[0]) : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
+            var threads = args.Length != 0
+                ? Convert.ToInt32(args[0])
+                : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
 
             var tablesplit = tableList.Split(threads);
 
@@ -65,14 +63,15 @@ namespace pfboolparse
             {
                 thread.Start();
             }
-
         }
 
         private static void DoGrab<T>(IEnumerable<T> list)
         {
             Console.SetOut(Console.Out);
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId +
+                              " Started");
 
+            /*
             var sqlServer = "-S " + Db;
             foreach (var s in list)
             {
@@ -86,7 +85,8 @@ namespace pfboolparse
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " is working on " + s);
             }
             Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
-            /*
+            */
+
             var liverampExport = new SqlConnection
             {
                 ConnectionString = "Data Source=" + Db + ";" +
@@ -96,39 +96,54 @@ namespace pfboolparse
             };
 
             var ids = new List<string>();
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
+            //Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId +
+            //                  " Started");
             liverampExport.Open();
 
             foreach (var s in list)
             {
-                
                 using (var command = liverampExport.CreateCommand())
                 {
-                    var query = ConfigurationManager.AppSettings["Query2"];
-                    var replace = "\"" + s + "\"";
-                    query = query.Replace("TABLENAME", replace);
+                    var query2 = ConfigurationManager.AppSettings["Query2"];
+                    var replace = "[" + s + "]";
+                    query2 = query2.Replace("TABLENAME", replace);
                     command.CommandTimeout = int.MaxValue;
-                    command.CommandText = query;
+                    command.CommandText = query2;
                     using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
                             //tableList.Add(reader["Table_Name"].ToString());
-                            ids.Add(reader["pf_id"].ToString());
+                            ids.Add(reader[0].ToString());
                             //Console.WriteLine(s + ": " + reader["pf_id"]);
                         }
                     }
 
 
-                    
-                        foreach (var ss in ids)
+                    foreach (var ss in ids)
+                    {
+                        Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + ": " + s + ": " + ss);
+                        //using (var sw = new StreamWriter(Path + s + ".psv"))
+                        //{
+                        //    sw.WriteLine(ss + "\r\n");
+                        //}
+                        var replace2 = "'" + s + "'";
+                        var query3 = ConfigurationManager.AppSettings["Query3"];
+                        query3 = query3.Replace("TABLENAME", replace2);
+                        query3 = query3.Replace("TABLECOUNT", ss);
+                        command.CommandText = query3;
+                        command.CommandTimeout = int.MaxValue;
+                        try
                         {
-                            using (var sw = new StreamWriter(Path + s + ".psv"))
-                            {
-                                sw.WriteLine(ss + "\r\n");
-                            }
+                            command.ExecuteNonQuery();
+                            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + ": Successfully inserted into pf_counts");
                         }
-                    
+                        catch (SqlException e)
+                        {
+                            Console.WriteLine("SQL Exception :" + e.ErrorCode);
+                        }
+                    }
+
 
                     //var strings = ids.Aggregate<string, string>(null, (current, ss) => current + (ss + "\r\n"));
 
@@ -136,17 +151,15 @@ namespace pfboolparse
                     //File.WriteAllText(Path + s + ".psv", strings);
                     ids.Clear();
                 }
-
             }
 
             liverampExport.Close();
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": ***Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
-            */
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": ***Thread #" + Thread.CurrentThread.ManagedThreadId +
+                              " has completed***");
         }
 
         private static void ProcessCmd(string fileName, string arguments, string zfile)
         {
-
             var proc = new System.Diagnostics.Process
             {
                 StartInfo =
@@ -167,7 +180,7 @@ namespace pfboolparse
             CreateZip(zfile);
             File.Delete(Path + zfile + ".psv");
         }
-        
+
         public static void CreateZip(string filename)
         {
             var fsOut = File.Create(Path + filename + ".zip");
@@ -209,8 +222,5 @@ namespace pfboolparse
             zipStream.IsStreamOwner = true; // Makes the Close also Close the underlying stream
             zipStream.Close();
         }
-        
     }
-
-    
 }
