@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
-using ZipFile = System.IO.Compression.ZipFile;
 
 namespace pfboolparse
 {
@@ -83,7 +81,7 @@ namespace pfboolparse
                 
                 query2 = query2.Replace("TABLENAME", replace);
                 ProcessCmd("bcp",
-                    $"\"{query2}\" queryout \"{Path}{s}.psv\" -c -t; -U sa -P liamcow {sqlServer}", s.ToString());
+                    $"\"{query2}\" queryout \"{Path}{s}.psv\" -c -t | -U sa -P liamcow {sqlServer}", s.ToString());
 
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " is working on " + s);
             }
