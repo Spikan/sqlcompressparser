@@ -73,20 +73,7 @@ namespace pfboolparse
             Console.SetOut(Console.Out);
             Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
 
-            var sqlServer = "-S " + Db;
-            foreach (var s in list)
-            {
-                var query2 = ConfigurationManager.AppSettings["Query2"];
-                var replace = "[" + s + "]";
-                
-                query2 = query2.Replace("TABLENAME", replace);
-                ProcessCmd("bcp",
-                    $"\"{query2}\" queryout \"{Path}{s}.psv\" -c -t | -U sa -P liamcow {sqlServer}", s.ToString());
-
-                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " is working on " + s);
-            }
-            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
-            /*
+            
             var liverampExport = new SqlConnection
             {
                 ConnectionString = "Data Source=" + Db + ";" +
@@ -96,19 +83,25 @@ namespace pfboolparse
             };
 
             var ids = new List<string>();
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
             liverampExport.Open();
 
+                
+               
+
+            
+            
+
+            var sqlServer = "-S " + Db;
             foreach (var s in list)
             {
-                
+                /*
+
                 using (var command = liverampExport.CreateCommand())
-                {
-                    var query = ConfigurationManager.AppSettings["Query2"];
-                    var replace = "\"" + s + "\"";
-                    query = query.Replace("TABLENAME", replace);
+                {                   
+                    var query3 = ConfigurationManager.AppSettings["Query3"];
+                    query3 = query3.Replace("TABLENAME", s.ToString());
                     command.CommandTimeout = int.MaxValue;
-                    command.CommandText = query;
+                    command.CommandText = query3;
                     using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -120,28 +113,70 @@ namespace pfboolparse
                     }
 
 
+
+                    var strings = ids.Aggregate<string, string>(null, (current, ss) => current + (ss + "\r\n"));
+
+
                     
-                        foreach (var ss in ids)
-                        {
-                            using (var sw = new StreamWriter(Path + s + ".psv"))
-                            {
-                                sw.WriteLine(ss + "\r\n");
-                            }
-                        }
-                    
-
-                    //var strings = ids.Aggregate<string, string>(null, (current, ss) => current + (ss + "\r\n"));
-
-
-                    //File.WriteAllText(Path + s + ".psv", strings);
                     ids.Clear();
+
+
                 }
 
-            }
+                liverampExport.Close();
+                */
 
-            liverampExport.Close();
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": ***Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
-            */
+                File.WriteAllText(Path + s + ".psv", "pf_id\r\n");
+                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
+
+                var replace = "[" + s + "]";
+                var query2 = ConfigurationManager.AppSettings["Query2"];
+                query2 = query2.Replace("TABLENAME", replace);
+                string bcpargs = $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}";
+                    var bcproc = new System.Diagnostics.Process
+                    {
+                        StartInfo =
+                {
+                    FileName = "bcp",
+                    Arguments = bcpargs,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true
+                }
+                    };
+                bcproc.Start();
+                bcproc.OutputDataReceived += null;
+                bcproc.BeginOutputReadLine();
+                bcproc.WaitForExit();
+
+                var proc = new System.Diagnostics.Process
+                {
+                    StartInfo =
+                {
+                    FileName = "cmd",
+                    Arguments = "/C type \""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true
+                }
+                };
+                proc.Start();
+                proc.OutputDataReceived += null;
+                proc.BeginOutputReadLine();
+                proc.WaitForExit();
+
+                CreateZip(s.ToString());
+                File.Delete(Path + s + ".psv");
+                File.Delete(Path + s + ".txt");
+
+                
+               // ProcessCmd("bcp",
+               //    $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}", "0");
+
+               // ProcessCmd("type", "\""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"", s.ToString());
+
+                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished with " + s);
+            }
+            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
+            
         }
 
         private static void ProcessCmd(string fileName, string arguments, string zfile)
@@ -164,8 +199,10 @@ namespace pfboolparse
 
             //using (var zip = ZipFile.Open(Path + zfile + ".zip", ZipArchiveMode.Create))
             //    zip.CreateEntryFromFile(Path + zfile + ".psv", zfile + ".psv");
+            if (zfile == "0") return;
             CreateZip(zfile);
             File.Delete(Path + zfile + ".psv");
+            File.Delete(Path + zfile + ".txt");
         }
         
         public static void CreateZip(string filename)
