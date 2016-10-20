@@ -126,7 +126,7 @@ namespace pfboolparse
                 liverampExport.Close();
                 */
 
-                File.WriteAllText(Path + s + ".psv", "pf_id\r\n");
+                File.WriteAllText(Path + s, "pf_id\r\n");
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
 
                 var replace = "[" + s + "]";
@@ -153,7 +153,7 @@ namespace pfboolparse
                     StartInfo =
                 {
                     FileName = "cmd",
-                    Arguments = "/C type \""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"",
+                    Arguments = "/C type \""+ Path + s + ".txt\" >> \"" + Path + s +"\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true
                 }
@@ -164,7 +164,7 @@ namespace pfboolparse
                 proc.WaitForExit();
 
                 CreateZip(s.ToString());
-                File.Delete(Path + s + ".psv");
+                File.Delete(Path + s);
                 File.Delete(Path + s + ".txt");
 
                 
@@ -198,10 +198,10 @@ namespace pfboolparse
             proc.WaitForExit();
 
             //using (var zip = ZipFile.Open(Path + zfile + ".zip", ZipArchiveMode.Create))
-            //    zip.CreateEntryFromFile(Path + zfile + ".psv", zfile + ".psv");
+            //    zip.CreateEntryFromFile(Path + zfile, zfile);
             if (zfile == "0") return;
             CreateZip(zfile);
-            File.Delete(Path + zfile + ".psv");
+            File.Delete(Path + zfile);
             File.Delete(Path + zfile + ".txt");
         }
         
@@ -212,9 +212,9 @@ namespace pfboolparse
 
             zipStream.SetLevel(9); //0-9, 9 being the highest level 
 
-            var fi = new FileInfo(Path + filename + ".psv");
+            var fi = new FileInfo(Path + filename);
 
-            var entryName = filename + ".psv"; // Makes the name in zip based on the folder
+            var entryName = filename; // Makes the name in zip based on the folder
             entryName = ZipEntry.CleanName(entryName); // Removes drive from name and fixes slash direction
             var newEntry = new ZipEntry(entryName)
             {
@@ -238,7 +238,7 @@ namespace pfboolparse
             // Zip the file in buffered chunks
             // the "using" will close the stream even if an exception occurs
             var buffer = new byte[4096];
-            using (var streamReader = File.OpenRead(Path + filename + ".psv"))
+            using (var streamReader = File.OpenRead(Path + filename))
             {
                 StreamUtils.Copy(streamReader, zipStream, buffer);
             }
