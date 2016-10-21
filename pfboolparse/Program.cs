@@ -125,14 +125,14 @@ namespace pfboolparse
 
                 liverampExport.Close();
                 */
-
-                File.WriteAllText(Path + s, "pf_id|"+ s + "\r\n");
+                var nokbm = s.ToString().Replace("_KBM", "");
+                File.WriteAllText(Path + nokbm, "pf_id|"+ nokbm + "\r\n");
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
 
                 var replace = "[" + s + "]";
                 var query2 = ConfigurationManager.AppSettings["Query2"];
                 query2 = query2.Replace("TABLENAME", replace);
-                string bcpargs = $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}";
+                string bcpargs = $"\"{query2}\" queryout \"{Path}{nokbm}.txt\" -c -t | -U sa -P liamcow {sqlServer}";
                     var bcproc = new System.Diagnostics.Process
                     {
                         StartInfo =
@@ -153,7 +153,7 @@ namespace pfboolparse
                     StartInfo =
                 {
                     FileName = "cmd",
-                    Arguments = "/C type \""+ Path + s + ".txt\" >> \"" + Path + s +"\"",
+                    Arguments = "/C type \""+ Path + nokbm + ".txt\" >> \"" + Path + nokbm +"\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true
                 }
@@ -163,9 +163,9 @@ namespace pfboolparse
                 proc.BeginOutputReadLine();
                 proc.WaitForExit();
 
-                CreateZip(s.ToString());
-                File.Delete(Path + s);
-                File.Delete(Path + s + ".txt");
+                CreateZip(nokbm);
+                File.Delete(Path + nokbm);
+                File.Delete(Path + nokbm + ".txt");
 
                 
                // ProcessCmd("bcp",
