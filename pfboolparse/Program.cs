@@ -26,7 +26,7 @@ namespace pfboolparse
             var taxonomy = new SqlConnection
             {
                 ConnectionString = "Data Source=" + Db + ";" +
-                                   "Initial Catalog=segment_taxonomy;" +
+                                   "Initial Catalog=liveramp_export_2016_10;" +
                                    "User id=sa;" +
                                    "Password=liamcow;"
             };
@@ -125,7 +125,7 @@ namespace pfboolparse
 
                 liverampExport.Close();
                 */
-
+                
                 File.WriteAllText(Path + s, "pf_id\r\n");
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
 
