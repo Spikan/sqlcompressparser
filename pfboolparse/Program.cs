@@ -126,7 +126,7 @@ namespace pfboolparse
                 liverampExport.Close();
                 */
                 
-                File.WriteAllText(Path + s, "pf_id\r\n");
+                File.WriteAllText(Path + s, "pf_id|" + s +"\r\n");
                 Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
 
                 var replace = "[" + s + "]";
