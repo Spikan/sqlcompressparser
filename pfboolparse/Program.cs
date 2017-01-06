@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,8 +18,6 @@ namespace pfboolparse
 
         private static void Main(string[] args)
         {
-           
-            
             var exists = Directory.Exists(Path);
             if (!exists)
                 Directory.CreateDirectory(Path);
@@ -26,12 +25,10 @@ namespace pfboolparse
             var taxonomy = new SqlConnection
             {
                 ConnectionString = "Data Source=" + Db + ";" +
-                                   "Initial Catalog=segment_taxonomy;" +
+                                   "Initial Catalog=pf_consumerprofiles;" +
                                    "User id=sa;" +
                                    "Password=liamcow;"
             };
-
-            
 
 
             taxonomy.Open();
@@ -42,7 +39,7 @@ namespace pfboolparse
             {
                 command.CommandTimeout = int.MaxValue;
                 command.CommandText =
-                   ConfigurationManager.AppSettings["Query1"];
+                    ConfigurationManager.AppSettings["Query1"];
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
@@ -56,7 +53,9 @@ namespace pfboolparse
             taxonomy.Close();
 
 
-            var threads = args.Length != 0 ? Convert.ToInt32(args[0]) : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
+            var threads = args.Length != 0
+                ? Convert.ToInt32(args[0])
+                : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
 
             var tablesplit = tableList.Split(threads);
 
@@ -65,15 +64,15 @@ namespace pfboolparse
             {
                 thread.Start();
             }
-
         }
 
         private static void DoGrab<T>(IEnumerable<T> list)
         {
             Console.SetOut(Console.Out);
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId +
+                              " Started");
 
-            
+
             var liverampExport = new SqlConnection
             {
                 ConnectionString = "Data Source=" + Db + ";" +
@@ -85,11 +84,6 @@ namespace pfboolparse
             var ids = new List<string>();
             liverampExport.Open();
 
-                
-               
-
-            
-            
 
             var sqlServer = "-S " + Db;
             foreach (var s in list)
@@ -126,37 +120,38 @@ namespace pfboolparse
                 liverampExport.Close();
                 */
                 var nopf = s.ToString().Replace("pf_", "");
-                File.WriteAllText(Path + nopf, "pf_id|"+ nopf + "\r\n");
-                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
+                File.WriteAllText(Path + nopf, "pf_id" + "|" + nopf + "\r\n");
+                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId +
+                                  " finished headers on  " + s);
 
                 var replace = "[" + s + "]";
                 var query2 = ConfigurationManager.AppSettings["Query2"];
                 query2 = query2.Replace("TABLENAME", replace);
                 string bcpargs = $"\"{query2}\" queryout \"{Path}{nopf}.txt\" -c -t | -U sa -P liamcow {sqlServer}";
-                    var bcproc = new System.Diagnostics.Process
-                    {
-                        StartInfo =
+                var bcproc = new Process
                 {
-                    FileName = "bcp",
-                    Arguments = bcpargs,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                }
-                    };
+                    StartInfo =
+                    {
+                        FileName = "bcp",
+                        Arguments = bcpargs,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    }
+                };
                 bcproc.Start();
                 bcproc.OutputDataReceived += null;
                 bcproc.BeginOutputReadLine();
                 bcproc.WaitForExit();
 
-                var proc = new System.Diagnostics.Process
+                var proc = new Process
                 {
                     StartInfo =
-                {
-                    FileName = "cmd",
-                    Arguments = "/C type \""+ Path + nopf + ".txt\" >> \"" + Path + nopf +"\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                }
+                    {
+                        FileName = "cmd",
+                        Arguments = "/C type \"" + Path + nopf + ".txt\" >> \"" + Path + nopf + "\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true
+                    }
                 };
                 proc.Start();
                 proc.OutputDataReceived += null;
@@ -167,22 +162,22 @@ namespace pfboolparse
                 File.Delete(Path + nopf);
                 File.Delete(Path + nopf + ".txt");
 
-                
-               // ProcessCmd("bcp",
-               //    $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}", "0");
 
-               // ProcessCmd("type", "\""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"", s.ToString());
+                // ProcessCmd("bcp",
+                //    $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}", "0");
 
-                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished with " + s);
+                // ProcessCmd("type", "\""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"", s.ToString());
+
+                Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId +
+                                  " finished with " + s);
             }
-            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
-            
+            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" +
+                              Thread.CurrentThread.ManagedThreadId + " has completed***");
         }
 
         private static void ProcessCmd(string fileName, string arguments, string zfile)
         {
-
-            var proc = new System.Diagnostics.Process
+            var proc = new Process
             {
                 StartInfo =
                 {
@@ -204,7 +199,7 @@ namespace pfboolparse
             File.Delete(Path + zfile);
             File.Delete(Path + zfile + ".txt");
         }
-        
+
         public static void CreateZip(string filename)
         {
             var fsOut = File.Create(Path + filename + ".zip");
@@ -246,8 +241,5 @@ namespace pfboolparse
             zipStream.IsStreamOwner = true; // Makes the Close also Close the underlying stream
             zipStream.Close();
         }
-        
     }
-
-    
 }
