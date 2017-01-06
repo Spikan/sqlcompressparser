@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
@@ -19,7 +19,7 @@ namespace pfboolparse
         private static readonly string Un = ConfigurationManager.AppSettings["Username"];
         private static readonly string Ps = ConfigurationManager.AppSettings["Password"];
         private static readonly string Sv = ConfigurationManager.AppSettings["Server"];
-        private static readonly string Db = ConfigurationManager.AppSettings["Database"]; 
+        private static readonly string Db = ConfigurationManager.AppSettings["Database"];
 
         private static void Main(string[] args)
         {
@@ -29,7 +29,7 @@ namespace pfboolparse
             var pass = Ps;
 
             //ask if user wants to use values from app.config
-            Console.Write("Use Settings From Config? y/n: "); 
+            Console.Write("Use Settings From Config? y/n: ");
 
             var config = Console.ReadLine();
             if (config != null && char.ToUpper(config[0]) == 'N')
@@ -40,14 +40,13 @@ namespace pfboolparse
                 Console.WriteLine(server);
                 Console.Write("Database?: ");
                 database = Console.ReadLine();
-                Console.WriteLine("Server: " + server + "\r\n DB: " + database); 
-                
+                Console.WriteLine("Server: " + server + "\r\n DB: " + database);
             }
             else
             {
                 //else pull data from app.config
                 server = Sv;
-                database = Db; 
+                database = Db;
             }
 
             var exists = Directory.Exists(Path);
@@ -56,7 +55,7 @@ namespace pfboolparse
 
             //look for \psvs\ path, and create if doesn't exist
             if (!exists)
-                Directory.CreateDirectory(Path);  
+                Directory.CreateDirectory(Path);
 
             if (!exists1)
                 Directory.CreateDirectory(Path + "segment_as_column\\");
@@ -65,7 +64,7 @@ namespace pfboolparse
                 Directory.CreateDirectory(Path + "filewide\\");
 
             //create new sql connection to server and db
-            var connection = new SqlConnection  
+            var connection = new SqlConnection
             {
                 ConnectionString = "Data Source=" + server + ";" +
                                    "Initial Catalog=" + database + ";" +
@@ -80,98 +79,62 @@ namespace pfboolparse
             var tableList = new List<string>();
 
             //create query command
-            using (var command = connection.CreateCommand()) 
+            using (var command = connection.CreateCommand())
             {
                 //timeout max
                 command.CommandTimeout = int.MaxValue;
                 //read query from app.config
                 command.CommandText =
-                   ConfigurationManager.AppSettings["Query"];
+                    ConfigurationManager.AppSettings["Query"];
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
                         //add each table name to tableList
-                        tableList.Add(reader["Table_Name"].ToString()); 
-                        //Console.WriteLine(reader["Table_Name"]);
+                        tableList.Add(reader["Table_Name"].ToString());
                     }
                 }
             }
             //close connection
-            connection.Close(); 
+            connection.Close();
 
             //determine # of threads either in app.config or command line arg
-            var threads = args.Length != 0 ? Convert.ToInt32(args[0]) : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
+            var threads = args.Length != 0
+                ? Convert.ToInt32(args[0])
+                : Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
 
             //split list of tables into groups for threads to handle
-            var tablesplit = tableList.Split(threads); 
+            var tablesplit = tableList.Split(threads);
 
 
             foreach (var thread in tablesplit.Select(ll => new Thread(() => DoGrab(ll, server, database, user, pass))))
             {
                 //start data grab
-                thread.Start(); 
+                thread.Start();
             }
-
         }
 
         private static void DoGrab<T>(IEnumerable<T> list, string server, string database, string user, string pass)
         {
             Console.SetOut(Console.Out);
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId + " Started");
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread  #" + Thread.CurrentThread.ManagedThreadId +
+                              " Started");
 
-            
+
             var connection2 = new SqlConnection
             {
                 ConnectionString = "Data Source=" + server + ";" +
                                    "Initial Catalog=" + database + ";" +
                                    "User id=" + user + ";" +
-                                   "Password="+ pass + ";"
+                                   "Password=" + pass + ";"
             };
 
             var ids = new List<string>();
             connection2.Open();
 
-                
-               
 
-            
-            
-
-            
             foreach (var s in list)
             {
-                /*
-
-                using (var command = liverampExport.CreateCommand())
-                {                   
-                    var query3 = ConfigurationManager.AppSettings["Query3"];
-                    query3 = query3.Replace("TABLENAME", s.ToString());
-                    command.CommandTimeout = int.MaxValue;
-                    command.CommandText = query3;
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            //tableList.Add(reader["Table_Name"].ToString());
-                            ids.Add(reader["pf_id"].ToString());
-                            //Console.WriteLine(s + ": " + reader["pf_id"]);
-                        }
-                    }
-
-
-
-                    var strings = ids.Aggregate<string, string>(null, (current, ss) => current + (ss + "\r\n"));
-
-
-                    
-                    ids.Clear();
-
-
-                }
-
-                liverampExport.Close();
-                */
                 var colNum = GetColNum(connection2, "" + s);
                 var query1 = ConfigurationManager.AppSettings["1ColQuery"];
                 var query2 = ConfigurationManager.AppSettings["2ColQuery"];
@@ -186,38 +149,13 @@ namespace pfboolparse
                     File.WriteAllText(Path + "segment_as_column\\" + s, "pf_id|" + s + "\r\n");
                     DoBcp(Path + "segment_as_column\\", "" + s, query2, database, server, colNum, connection2);
                 }
-
             }
-            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " has completed***");
+
+            Console.WriteLine("***" + DateTime.Now.ToLongTimeString() + ": Thread #" +
+                              Thread.CurrentThread.ManagedThreadId + " has completed***");
             connection2.Close();
         }
 
-        private static void ProcessCmd(string fileName, string arguments, string zfile)
-        {
-
-            var proc = new System.Diagnostics.Process
-            {
-                StartInfo =
-                {
-                    FileName = fileName,
-                    Arguments = arguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                }
-            };
-            proc.Start();
-            proc.OutputDataReceived += null;
-            proc.BeginOutputReadLine();
-            proc.WaitForExit();
-
-            //using (var zip = ZipFile.Open(Path + zfile + ".zip", ZipArchiveMode.Create))
-            //    zip.CreateEntryFromFile(Path + zfile, zfile);
-            if (zfile == "0") return;
-            //CreateZip(zfile);
-            File.Delete(Path + zfile);
-            File.Delete(Path + zfile + ".txt");
-        }
-        
         public static void CreateZip(string path, string filename)
         {
             var fsOut = File.Create(path + filename + ".zip");
@@ -313,7 +251,8 @@ namespace pfboolparse
             return password;
         }
 
-        public static void DoBcp(string path, string s, string query2, string database, string server, int numCol, SqlConnection connection2)
+        public static void DoBcp(string path, string s, string query2, string database, string server, int numCol,
+            SqlConnection connection2)
         {
             var sqlServer = "-S " + server;
 
@@ -323,7 +262,8 @@ namespace pfboolparse
 
                 var noApos = s;
                 noApos = noApos.Replace("'", "''");
-                var columnQuery = "select column_name from information_schema.columns where table_name = '"+ noApos + "' and ordinal_position <= 2";
+                var columnQuery = "select column_name from information_schema.columns where table_name = '" + noApos +
+                                  "' and ordinal_position <= 2";
                 using (var command = connection2.CreateCommand())
                 {
                     command.CommandTimeout = int.MaxValue;
@@ -331,9 +271,9 @@ namespace pfboolparse
 
                     using (var reader = command.ExecuteReader())
                     {
-                        int n = 0;
-                       while(reader.Read())
-                        { 
+                        var n = 0;
+                        while (reader.Read())
+                        {
                             colList[n] = reader["column_name"].ToString();
                             n++;
                         }
@@ -343,14 +283,15 @@ namespace pfboolparse
                 query2 = query2.Replace("COLUMNS", colList[0] + "," + colList[1]);
             }
 
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished headers on  " + s);
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId +
+                              " finished headers on  " + s);
 
             var replace = "[" + s + "]";
-            
+
             query2 = query2.Replace("TABLENAME", replace);
             query2 = query2.Replace("DATABASE", database);
             string bcpargs = $"\"{query2}\" queryout \"{path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}";
-            var bcproc = new System.Diagnostics.Process
+            var bcproc = new Process
             {
                 StartInfo =
                 {
@@ -365,12 +306,12 @@ namespace pfboolparse
             bcproc.BeginOutputReadLine();
             bcproc.WaitForExit();
 
-            var proc = new System.Diagnostics.Process
+            var proc = new Process
             {
                 StartInfo =
                 {
                     FileName = "cmd",
-                    Arguments = "/C type \""+ path + s + ".txt\" >> \"" + path + s +"\"",
+                    Arguments = "/C type \"" + path + s + ".txt\" >> \"" + path + s + "\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true
                 }
@@ -384,15 +325,8 @@ namespace pfboolparse
             File.Delete(path + s);
             File.Delete(path + s + ".txt");
 
-
-            // ProcessCmd("bcp",
-            //    $"\"{query2}\" queryout \"{Path}{s}.txt\" -c -t | -U sa -P liamcow {sqlServer}", "0");
-
-            // ProcessCmd("type", "\""+ Path + s + ".txt\" >> \"" + Path + s +".psv\"", s.ToString());
-
-            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId + " finished with " + s);
+            Console.WriteLine(DateTime.Now.ToLongTimeString() + ": Thread #" + Thread.CurrentThread.ManagedThreadId +
+                              " finished with " + s);
         }
     }
-
-    
 }
